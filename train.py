@@ -20,13 +20,14 @@ def main(args):
         codebook_size = args.codebook_size,
         rq_num_quantizers = args.rq_num_quantizers,
         use_local_attn = True,
-        use_mhesa = False,
+        use_mhesa = True,
         attn_window_size = args.attn_window_size,       # local attention receptive field at bottleneck
         attn_depth = args.attn_depth                # 2 local attention transformer blocks - the soundstream folks were not experts with attention, so i took the liberty to add some. encodec went with lstms, but attention should be better
     )
 
     trainer = SoundStreamTrainer(
     soundstream,
+    use_ema = True,
     folder = args.folder,
     batch_size = args.batch_size,
     grad_accum_every = args.grad_accum_every,         # effective batch size of 32
@@ -63,7 +64,7 @@ if __name__ == '__main__':
     parser.add_argument('--attn_depth', default=2, type=int,)
     parser.add_argument('--batch_size', default=2, type=int,)
     parser.add_argument('--data_max_length_seconds', default=2, type=int,)
-    parser.add_argument('--grad_accum_every', default=8, type=int)
+    parser.add_argument('--grad_accum_every', default=4, type=int)
     parser.add_argument("--num_train_steps",  default=10000,type=int)
     parser.add_argument("--save_results_every",  default=100,type=int)
     parser.add_argument("--save_model_every",  default=1000,type=int)
