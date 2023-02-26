@@ -366,7 +366,7 @@ class SoundStream(nn.Module):
         rq_ema_decay = 0.95,
         input_channels = 1,
         discr_multi_scales = (1, 0.5, 0.25),
-        stft_normalized = False,
+        stft_normalized = True,
         enc_cycle_dilations = (1, 3, 9),
         dec_cycle_dilations = (1, 3, 9),
         multi_spectral_window_powers_of_two = tuple(range(6, 12)),

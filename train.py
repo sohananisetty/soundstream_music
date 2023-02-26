@@ -34,15 +34,15 @@ def main(args):
     data_max_length_seconds = args.data_max_length_seconds,  # train on 2 second audio
     num_train_steps = args.num_train_steps,
     results_folder = args.output_dir,
-    
     save_results_every = args.save_results_every,
     save_model_every = args.save_model_every,
     log_losses_every = args.log_losses_every,
+    wandb_every = args.wandb_every,
     ).cuda()
 
     print("Starting training")
 
-    trainer.train()
+    trainer.train(resume = args.resume)
      
 
 
@@ -52,8 +52,9 @@ def main(args):
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--folder', default="/srv/share4/sanisetty3/MagnaTagATune/data" , help="folder with train and test data")
+    parser.add_argument('--folder', default="/srv/share4/sanisetty3/FMA/fma_large/" , help="folder with train and test data")
     parser.add_argument('--checkpoint', default='')
+    parser.add_argument('--resume', default=True, type = bool)
     parser.add_argument('--output_dir', default="/srv/scratch/sanisetty3/soundstream_music/checkpoints/no_deepspeed/fixed_input_length_no_att/")
     parser.add_argument('--evaluate', action='store_true')
     parser.add_argument('--seed', default=42, type=int)
@@ -62,18 +63,20 @@ if __name__ == '__main__':
     parser.add_argument('--rq_num_quantizers', default=8, type=int)
     parser.add_argument('--attn_window_size', default=128, type=int)
     parser.add_argument('--attn_depth', default=2, type=int,)
-    parser.add_argument('--batch_size', default=2, type=int,)
+    parser.add_argument('--batch_size', default=8, type=int,)
     parser.add_argument('--data_max_length_seconds', default=2, type=int,)
-    parser.add_argument('--grad_accum_every', default=4, type=int)
+    parser.add_argument('--grad_accum_every', default=8, type=int)
     parser.add_argument("--num_train_steps",  default=10000,type=int)
     parser.add_argument("--save_results_every",  default=100,type=int)
-    parser.add_argument("--save_model_every",  default=1000,type=int)
+    parser.add_argument("--save_model_every",  default=400,type=int)
     parser.add_argument("--log_losses_every",  default=1,type=int)
+    parser.add_argument("--wandb_every",  default=50,type=int)
 
     args = parser.parse_args()
 
     import torch
     torch.cuda.empty_cache()
+    torch.backends.cuda.matmul.allow_tf32 = True
 
     
     main(args)

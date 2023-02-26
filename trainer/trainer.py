@@ -117,9 +117,10 @@ class SoundStreamTrainer(nn.Module):
 		discr_max_grad_norm = None,
 		save_results_every = 100,
 		save_model_every = 1000,
+		wandb_every = 50,
 		log_losses_every = 1,
 		results_folder = './results',
-		valid_frac = 0.05,
+		valid_frac = 0.01,
 		random_split_seed = 42,
 		use_ema = True,
 		ema_beta = 0.995,
@@ -137,9 +138,11 @@ class SoundStreamTrainer(nn.Module):
 		self.accelerator = Accelerator(kwargs_handlers = [kwargs], **accelerate_kwargs)
 
 		transformers.set_seed(42)
-		wandb.login()
-		wandb.init(project="soundstream_music_att")
-		
+
+		if self.is_main:
+			wandb.login()
+			wandb.init(project="soundstream_music_att")
+			
 		self.soundstream = soundstream
 
 		self.use_ema = use_ema
@@ -229,6 +232,7 @@ class SoundStreamTrainer(nn.Module):
 		self.save_model_every = save_model_every
 		self.save_results_every = save_results_every
 		self.log_losses_every = log_losses_every
+		self.wandb_every = wandb_every
 
 		self.apply_grad_penalty_every = apply_grad_penalty_every
 
@@ -255,7 +259,8 @@ class SoundStreamTrainer(nn.Module):
 		pkg = dict(
 			model = self.accelerator.get_state_dict(self.soundstream),
 			optim = self.optim.state_dict(),
-			discr_optim = self.discr_optim.state_dict()
+			discr_optim = self.discr_optim.state_dict(),
+			steps = self.steps
 		)
 
 		if self.use_ema:
@@ -271,7 +276,7 @@ class SoundStreamTrainer(nn.Module):
 	def unwrapped_soundstream(self):
 		return self.accelerator.unwrap_model(self.soundstream)
 
-	def load(self, path):
+	def load(self, path , steps = None):
 		path = Path(path)
 		assert path.exists()
 		pkg = torch.load(str(path), map_location = 'cpu')
@@ -299,6 +304,15 @@ class SoundStreamTrainer(nn.Module):
 		for key, _ in self.multiscale_discriminator_iter():
 			discr_optim = getattr(self, key)
 			discr_optim.load_state_dict(pkg[key])
+
+		if steps is not None:
+			self.steps = torch.Tensor([steps])
+		else:
+			try:
+				self.steps = pkg["steps"]
+				print("starting at step: ", self.steps)
+			except:
+				pass
 
 	def multiscale_discriminator_iter(self):
 		for ind, discr in enumerate(self.unwrapped_soundstream.discriminators):
@@ -427,9 +441,9 @@ class SoundStreamTrainer(nn.Module):
 				self.accelerator.log({f"discr_loss (scale {scale_factor})": loss}, step=steps)
 
 		# log
-
-		for key , value in logs.items():
-			wandb.log({f'train_loss/{key}': value})           
+		if self.is_main and (steps%self.wandb_every == 0):
+			for key , value in logs.items():
+				wandb.log({f'train_loss/{key}': value})           
 
 		self.print(losses_str)
 
@@ -448,7 +462,7 @@ class SoundStreamTrainer(nn.Module):
 
 		# self.accelerator.wait_for_everyone()
 
-		if self.is_main and not (steps % self.save_results_every):
+		if self.is_main and (steps % self.save_results_every == 0):
 			models = [(self.unwrapped_soundstream, str(steps))]
 			if self.use_ema:
 				models.append((self.ema_soundstream.ema_model if self.use_ema else self.unwrapped_soundstream, f'{steps}.ema'))
@@ -488,7 +502,14 @@ class SoundStreamTrainer(nn.Module):
 		self.steps += 1
 		return logs
 
-	def train(self, log_fn = noop):
+	def train(self, resume = False, log_fn = noop):
+
+
+		if resume:
+			save_path = os.path.join(self.results_folder , "results")
+			chk = sorted(os.listdir(save_path) , key = lambda x: x.split('.')[1])[-1]
+			print("resuming from ", os.path.join(save_path , chk))
+			self.load(os.path.join(save_path , chk) , 2000)
 
 		while self.steps < self.num_train_steps:
 			logs = self.train_step()
