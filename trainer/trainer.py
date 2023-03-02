@@ -276,7 +276,7 @@ class SoundStreamTrainer(nn.Module):
 	def unwrapped_soundstream(self):
 		return self.accelerator.unwrap_model(self.soundstream)
 
-	def load(self, path , steps = None):
+	def load(self, path):
 		path = Path(path)
 		assert path.exists()
 		pkg = torch.load(str(path), map_location = 'cpu')
@@ -305,14 +305,12 @@ class SoundStreamTrainer(nn.Module):
 			discr_optim = getattr(self, key)
 			discr_optim.load_state_dict(pkg[key])
 
-		if steps is not None:
-			self.steps = torch.Tensor([steps])
-		else:
-			try:
-				self.steps = pkg["steps"]
-				print("starting at step: ", self.steps)
-			except:
-				pass
+		
+		try:
+			self.steps = pkg["steps"]
+			print("starting at step: ", self.steps)
+		except:
+			pass
 
 	def multiscale_discriminator_iter(self):
 		for ind, discr in enumerate(self.unwrapped_soundstream.discriminators):
@@ -509,7 +507,7 @@ class SoundStreamTrainer(nn.Module):
 			save_path = os.path.join(self.results_folder , "results")
 			chk = sorted(os.listdir(save_path) , key = lambda x: x.split('.')[1])[-1]
 			print("resuming from ", os.path.join(save_path , chk))
-			self.load(os.path.join(save_path , chk) , 2000)
+			self.load(os.path.join(save_path , chk))
 
 		while self.steps < self.num_train_steps:
 			logs = self.train_step()
