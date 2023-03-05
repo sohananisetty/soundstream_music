@@ -110,7 +110,7 @@ class SoundStreamTrainer(nn.Module):
 		data_max_length = None,
 		data_max_length_seconds = None,
 		folder,
-		lr = 2e-4,
+		lr = 1e-4,
 		grad_accum_every = 4,
 		wd = 0.,
 		max_grad_norm = 0.5,
@@ -122,7 +122,7 @@ class SoundStreamTrainer(nn.Module):
 		results_folder = './results',
 		valid_frac = 0.01,
 		random_split_seed = 42,
-		use_ema = True,
+		use_ema = False,
 		ema_beta = 0.995,
 		ema_update_after_step = 500,
 		ema_update_every = 10,
@@ -218,6 +218,7 @@ class SoundStreamTrainer(nn.Module):
 		)
 
 		# prepare the multiscale discriminators with accelerator
+
 
 		for name, _ in self.multiscale_discriminator_iter():
 			optimizer = getattr(self, name)
@@ -505,7 +506,7 @@ class SoundStreamTrainer(nn.Module):
 
 		if resume:
 			save_path = os.path.join(self.results_folder , "results")
-			chk = sorted(os.listdir(save_path) , key = lambda x: x.split('.')[1])[-1]
+			chk = sorted(os.listdir(save_path) , key = lambda x: int(x.split('.')[1]))[-1]
 			print("resuming from ", os.path.join(save_path , chk))
 			self.load(os.path.join(save_path , chk))
 

@@ -372,7 +372,7 @@ class SoundStream(nn.Module):
         multi_spectral_window_powers_of_two = tuple(range(6, 12)),
         multi_spectral_n_ffts = 512,
         multi_spectral_n_mels = 64,
-        recon_loss_weight = 1.,
+        recon_loss_weight = 3.,
         multi_spectral_recon_loss_weight = 1.,
         adversarial_loss_weight = 1.,
         feature_loss_weight = 100,

@@ -1,9 +1,6 @@
 from pathlib import Path
 from functools import partial, wraps
 
-from beartype import beartype
-from beartype.typing import Tuple, Union, Optional
-from beartype.door import is_bearable
 
 import torchaudio
 from torchaudio.functional import resample

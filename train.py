@@ -66,7 +66,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=8, type=int,)
     parser.add_argument('--data_max_length_seconds', default=2, type=int,)
     parser.add_argument('--grad_accum_every', default=4, type=int)
-    parser.add_argument("--num_train_steps",  default=10000,type=int)
+    parser.add_argument("--num_train_steps",  default=41000,type=int)
     parser.add_argument("--save_results_every",  default=100,type=int)
     parser.add_argument("--save_model_every",  default=400,type=int)
     parser.add_argument("--log_losses_every",  default=1,type=int)
