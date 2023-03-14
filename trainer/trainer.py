@@ -110,7 +110,7 @@ class SoundStreamTrainer(nn.Module):
 		data_max_length = None,
 		data_max_length_seconds = None,
 		folder,
-		lr = 1e-4,
+		lr = 2e-4,
 		grad_accum_every = 4,
 		wd = 0.,
 		max_grad_norm = 0.5,
@@ -129,8 +129,7 @@ class SoundStreamTrainer(nn.Module):
 		apply_grad_penalty_every = 4,
 		dl_num_workers = 0,
 		accelerate_kwargs: dict = dict(),
-		use_lion = False,
-		force_clear_prev_results = None  # set to True | False to skip the prompt
+		force_clear_prev_results = False  # set to True | False to skip the prompt
 	):
 		super().__init__()
 
@@ -141,7 +140,7 @@ class SoundStreamTrainer(nn.Module):
 
 		if self.is_main:
 			wandb.login()
-			wandb.init(project="soundstream_music_att")
+			wandb.init(project="soundstream_music_no_mhse")
 			
 		self.soundstream = soundstream
 
@@ -293,7 +292,7 @@ class SoundStreamTrainer(nn.Module):
 
 		# otherwise load things normally
 
-		self.unwrapped_soundstream.load_state_dict(pkg['model'])
+		self.unwrapped_soundstream.load_state_dict(pkg['model'] , strict = False)
 
 		if self.use_ema:
 			assert 'ema_model' in pkg

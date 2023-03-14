@@ -19,7 +19,7 @@ from einops import rearrange, reduce, pack, unpack
 from vector_quantize_pytorch import ResidualVQ
 
 from local_attention import LocalMHA
-from local_attention.transformer import FeedForward
+from local_attention.transformer import FeedForward, DynamicPositionBias
 
 from mega_pytorch import MultiHeadedEMA
 
@@ -352,6 +352,42 @@ class LocalTransformerBlock(nn.Module):
         x = self.ff(x) + x
         return x
 
+# class LocalTransformer(nn.Module):
+#     def __init__(
+#         self,
+#         *,
+#         dim,
+#         depth,
+#         heads,
+#         window_size,
+#         dynamic_pos_bias = False,
+#         **kwargs
+#     ):
+#         super().__init__()
+#         self.window_size = window_size
+#         self.layers = nn.ModuleList([])
+
+#         self.pos_bias = None
+#         if dynamic_pos_bias:
+#             self.pos_bias = DynamicPositionBias(dim = dim // 2, heads = heads)
+
+#         for _ in range(depth):
+#             self.layers.append(nn.ModuleList([
+#                 LocalMHA(dim = dim, heads = heads, qk_rmsnorm = True, window_size = window_size, use_rotary_pos_emb = not dynamic_pos_bias, use_xpos = True, **kwargs),
+#                 FeedForward(dim = dim)
+#             ]))
+
+#     def forward(self, x):
+#         w = self.window_size
+
+#         attn_bias = self.pos_bias(w, w * 2) if exists(self.pos_bias) else None
+
+#         for attn, ff in self.layers:
+#             x = attn(x, attn_bias = attn_bias) + x
+#             x = ff(x) + x
+
+#         return x
+    
 class SoundStream(nn.Module):
     def __init__(
         self,
@@ -379,13 +415,15 @@ class SoundStream(nn.Module):
         quantize_dropout_cutoff_index = 1,
         target_sample_hz = 24000,
         use_local_attn = True,
-        use_mhesa = True,
+        use_mhesa = False,
         mhesa_heads = 4,
         mhesa_dim_head = 32,
         attn_window_size = 128,
         attn_dim_head = 64,
         attn_heads = 8,
-        attn_depth = 1
+        attn_depth = 1,
+        attn_xpos_scale_base = None,
+        attn_dynamic_pos_bias = False,
     ):
         super().__init__()
         self.target_sample_hz = target_sample_hz # for resampling on the fly
@@ -422,7 +460,21 @@ class SoundStream(nn.Module):
             causal = True
         )
 
+        # attn_kwargs = dict(
+        #     dim = codebook_dim,
+        #     dim_head = attn_dim_head,
+        #     heads = attn_heads,
+        #     depth = attn_depth,
+        #     window_size = attn_window_size,
+        #     xpos_scale_base = attn_xpos_scale_base,
+        #     dynamic_pos_bias = attn_dynamic_pos_bias,
+        #     prenorm = True,
+        #     causal = True
+        # )
+
         self.encoder_attn = nn.Sequential(*[LocalTransformerBlock(**attn_kwargs) for _ in range(attn_depth)]) if use_local_attn else None
+
+        # self.encoder_attn = LocalTransformer(**attn_kwargs) if use_local_attn else None
 
         self.rq = ResidualVQ(
             dim = codebook_dim,
@@ -437,6 +489,8 @@ class SoundStream(nn.Module):
         )
 
         self.decoder_attn = nn.Sequential(*[LocalTransformerBlock(**attn_kwargs) for _ in range(attn_depth)]) if use_local_attn else None
+
+        # self.decoder_attn = LocalTransformer(**attn_kwargs) if use_local_attn else None
 
         decoder_blocks = []
 
@@ -517,6 +571,7 @@ class SoundStream(nn.Module):
         path = Path(path)
         assert path.exists()
         pkg = torch.load(str(path))
+        print("pkg.keys()" , pkg.keys())
 
         # some hacky logic to remove confusion around loading trainer vs main model
 
@@ -525,7 +580,7 @@ class SoundStream(nn.Module):
             self.load_from_trainer_saved_obj(str(path))
             return
 
-        self.load_state_dict()
+        self.load_state_dict(strict = False)
 
     def load_from_trainer_saved_obj(self, path):
         path = Path(path)

@@ -27,7 +27,7 @@ def main(args):
 
     trainer = SoundStreamTrainer(
     soundstream,
-    use_ema = True,
+    use_ema = False,
     folder = args.folder,
     batch_size = args.batch_size,
     grad_accum_every = args.grad_accum_every,         # effective batch size of 32
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('--folder', default="/srv/share4/sanisetty3/FMA/fma_large/" , help="folder with train and test data")
     parser.add_argument('--checkpoint', default='')
     parser.add_argument('--resume', default=True, type = bool)
-    parser.add_argument('--output_dir', default="/srv/scratch/sanisetty3/soundstream_music/checkpoints/no_deepspeed/fixed_input_length_no_att/")
+    parser.add_argument('--output_dir', default="/srv/scratch/sanisetty3/soundstream_music/checkpoints/no_deepspeed/no_mhse/")
     parser.add_argument('--evaluate', action='store_true')
     parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--codebook_dim', default=768, type=int)
